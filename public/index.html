@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de matrices</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Calculadora de matrices con WebAssembly</h1>
+
+    <div id="form">
+        <input type="number" id="rows" placeholder="Filas" min="0">
+        <input type="number" id="cols" placeholder="Columnas" min="0">
+        <input type="number" id="num_threads" placeholder="Numero de hilos" min="0" max="20">
+        <button id="start">Calcular</button>
+    </div>
+
+    <h3 id="result"></h3>
+    <script src="module.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
