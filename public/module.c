@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <emscripten/emscripten.h>
+#include <wasm_simd128.h> // Biblioteca de SIMD de WebAssembly
 
 
 
@@ -41,8 +42,26 @@ void *multiply_partial(void *arg) {
 
     for (int i = data->start_row; i < data->end_row; i++) {
         for (int j = 0; j < data->rows; j++) {
-            data->resultado[i][j] = 0;
-            for (int k = 0; k < data->cols; k++) {
+            // Inicializa el vector SIMD para la suma acumulativa
+            v128_t sum_vector = wasm_f32x4_splat(0);
+
+            int k = 0;
+            // Procesa en bloques de 4 elementos
+            for (; k <= data->cols - 4; k += 4) {
+                // Carga vectores de 4 elementos
+                v128_t vec_a = wasm_v128_load(&data->matriz_a[i][k]);
+                v128_t vec_b = wasm_v128_load(&data->matriz_b[k][j]);
+                // Multiplica y acumula
+                sum_vector = wasm_f32x4_add(sum_vector, wasm_f32x4_mul(vec_a, vec_b));
+            }
+
+            // Reduce el vector SIMD a un único valor escalar
+            float sum_array[4];
+            wasm_v128_store(sum_array, sum_vector);
+            data->resultado[i][j] = sum_array[0] + sum_array[1] + sum_array[2] + sum_array[3];
+
+            // Procesa cualquier resto (cuando cols no es múltiplo de 4)
+            for (; k < data->cols; k++) {
                 data->resultado[i][j] += data->matriz_a[i][k] * data->matriz_b[k][j];
             }
         }
@@ -109,9 +128,13 @@ float calculate_matrices(int rows, int cols, int num_threads) {
     return execution_time;
 }
 
-// Función para obtener el tiempo de ejecución
 
 
-// emcc module.c -s USE_PTHREADS=1 -s PTHREAD_POOL_SIZE=20 \
+
+/*
+emcc module.c -s USE_PTHREADS=1 -s PTHREAD_POOL_SIZE=20 \
 -s EXPORTED_FUNCTIONS="['_calculate_matrices']" \
--s EXPORTED_RUNTIME_METHODS="['ccall']" -o module.js
+-s EXPORTED_RUNTIME_METHODS="['ccall']" \
+-msimd128 -o module.js
+
+*/
